@@ -17,7 +17,7 @@ use Drupal\user\UserInterface;
  * @ingroup commerce_pricelist
  *
  * @ContentEntityType(
- *   id = "price_list",
+ *   id = "commerce_price_list",
  *   label = @Translation("Price list"),
  *   label_collection = @Translation("Price lists"),
  *   label_singular = @Translation("price list"),
@@ -26,13 +26,12 @@ use Drupal\user\UserInterface;
  *     singular = "@count price list",
  *     plural = "@count price lists",
  *   ),
- *   bundle_label = @Translation("Price list type"),
  *   handlers = {
  *     "view_builder" = "Drupal\Core\Entity\EntityViewBuilder",
  *     "list_builder" = "Drupal\commerce_pricelist\PriceListListBuilder",
  *     "views_data" = "Drupal\views\EntityViewsData",
- *     "access" = "Drupal\commerce\EntityAccessControlHandler",
- *     "permission_provider" = "Drupal\commerce\EntityPermissionProvider",
+ *     "access" = "\Drupal\entity\EntityAccessControlHandler",
+ *     "permission_provider" = "\Drupal\entity\EntityPermissionProvider",
  *     "form" = {
  *       "default" = "Drupal\commerce_pricelist\Form\PriceListForm",
  *       "add" = "Drupal\commerce_pricelist\Form\PriceListForm",
@@ -43,10 +42,8 @@ use Drupal\user\UserInterface;
  *       "default" = "Drupal\entity\Routing\AdminHtmlRouteProvider",
  *       "delete-multiple" = "Drupal\entity\Routing\DeleteMultipleRouteProvider",
  *     },
- *     "translation" = "Drupal\content_translation\ContentTranslationHandler"
  *   },
  *   admin_permission = "administer price_list",
- *   translatable = TRUE,
  *   base_table = "price_list",
  *   data_table = "price_list_field_data",
  *   entity_keys = {
@@ -56,7 +53,6 @@ use Drupal\user\UserInterface;
  *     "uuid" = "uuid",
  *     "uid" = "user_id",
  *     "published" = "status",
- *     "langcode" = "langcode",
  *   },
  *   links = {
  *     "canonical" = "/price_list/{price_list}",
@@ -67,8 +63,6 @@ use Drupal\user\UserInterface;
  *     "delete-multiple-form" = "/admin/commerce/price_list/delete",
  *     "collection" = "/admin/commerce/price_lists",
  *   },
- *   bundle_entity_type = "price_list_type",
- *   field_ui_base_route = "entity.price_list_type.edit_form"
  * )
  */
 class PriceList extends CommerceContentEntityBase implements PriceListInterface {
@@ -226,7 +220,7 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
       }
 
       $price_list_item_storage = \Drupal::service('entity_type.manager')
-        ->getStorage('price_list_item');
+        ->getStorage('commerce_price_list_item');
       $price_list_item_storage->delete($price_list_items);
     }
   }

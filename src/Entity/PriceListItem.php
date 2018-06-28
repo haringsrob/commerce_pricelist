@@ -15,7 +15,7 @@ use Drupal\user\UserInterface;
  * @ingroup commerce_pricelist
  *
  * @ContentEntityType(
- *   id = "price_list_item",
+ *   id = "commerce_price_list_item",
  *   label = @Translation("Price list item"),
  *   label_collection = @Translation("Price list items"),
  *   label_singular = @Translation("price list item"),
@@ -35,8 +35,6 @@ use Drupal\user\UserInterface;
  *     "inline_form" = "Drupal\commerce_pricelist\Form\PriceListItemInlineForm",
  *   },
  *   admin_permission = "administer price_list",
- *   translatable = TRUE,
- *   content_translation_ui_skip = TRUE,
  *   base_table = "price_list_item",
  *   data_table = "price_list_item_field_data",
  *   entity_keys = {
@@ -45,10 +43,7 @@ use Drupal\user\UserInterface;
  *     "label" = "name",
  *     "uuid" = "uuid",
  *     "status" = "status",
- *     "langcode" = "langcode",
  *   },
- *   bundle_entity_type = "price_list_item_type",
- *   field_ui_base_route = "entity.price_list_item_type.edit_form"
  * )
  */
 class PriceListItem extends CommerceContentEntityBase implements PriceListItemInterface {
@@ -263,7 +258,7 @@ class PriceListItem extends CommerceContentEntityBase implements PriceListItemIn
     $fields['price_list_id'] = BaseFieldDefinition::create('entity_reference')
       ->setLabel(t('Price list'))
       ->setDescription(t('The parent price list of the Price list item entity.'))
-      ->setSetting('target_type', 'price_list')
+      ->setSetting('target_type', 'commerce_price_list')
       ->setRequired(TRUE)
       ->setDisplayConfigurable('view', TRUE);
 
@@ -369,30 +364,11 @@ class PriceListItem extends CommerceContentEntityBase implements PriceListItemIn
    * {@inheritdoc}
    */
   public static function bundleFieldDefinitions(EntityTypeInterface $entity_type, $bundle, array $base_field_definitions) {
-    /** @var \Drupal\commerce_pricelist\Entity\PriceListItemTypeInterface $price_list_item_type */
-    $price_list_item_type = PriceListItemType::load($bundle);
-    $purchasable_entity_type_id = $price_list_item_type->getPurchasableEntityTypeId();
-    /** @var \Drupal\Core\StringTranslation\TranslatableMarkup $purchasable_entity_type_label */
-    $purchasable_entity_type_label = $price_list_item_type->getPurchasableEntityType()->getLabel();
+    $purchased_entity_type = \Drupal::entityTypeManager()->getDefinition($bundle);
     $fields = [];
     $fields['purchased_entity'] = clone $base_field_definitions['purchased_entity'];
-    if ($purchasable_entity_type_id) {
-      $fields['purchased_entity']->setSetting('target_type', $purchasable_entity_type_id);
-      $fields['purchased_entity']->setLabel($purchasable_entity_type_label);
-    }
-    else {
-      // This price list item type won't reference a purchasable entity.
-      // The field can't be removed here, or converted to a configurable one, so
-      // it's hidden instead.
-      // https://www.drupal.org/node/2346347#comment-10254087.
-      $fields['purchased_entity']->setRequired(FALSE);
-      $fields['purchased_entity']->setDisplayOptions('form', [
-        'type' => 'hidden',
-      ]);
-      $fields['purchased_entity']->setDisplayConfigurable('form', FALSE);
-      $fields['purchased_entity']->setDisplayConfigurable('view', FALSE);
-      $fields['purchased_entity']->setReadOnly(TRUE);
-    }
+    $fields['purchased_entity']->setSetting('target_type', $purchased_entity_type->id());
+    $fields['purchased_entity']->setLabel($purchased_entity_type->getLabel());
 
     return $fields;
   }

@@ -37,8 +37,8 @@ abstract class PriceListKernelTestBase extends CommerceKernelTestBase {
     parent::setUp();
     $this->installEntitySchema('commerce_product_variation');
     $this->installEntitySchema('commerce_product');
-    $this->installEntitySchema('price_list_item');
-    $this->installEntitySchema('price_list');
+    $this->installEntitySchema('commerce_price_list_item');
+    $this->installEntitySchema('commerce_price_list');
     $this->installConfig(['commerce_product', 'commerce_pricelist']);
 
     $user = $this->createUser();

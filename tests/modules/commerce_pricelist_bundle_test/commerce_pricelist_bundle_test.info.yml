@@ -1,0 +1,4 @@
+name: Commerce Pricelist Bundle Test
+description: Provides a few dummy entities to test generated bundles
+type: module
+core: 8.x

@@ -10,16 +10,3 @@ commerce_pricelist.configuration:
   route_name: 'commerce_pricelist.configuration'
   description: 'Price List'
   parent: 'commerce.configuration'
-
-# Price list type menu items definition
-entity.price_list_type.collection:
-  title: 'Price list types'
-  route_name: 'entity.price_list_type.collection'
-  description: 'Price list types'
-  parent: 'commerce_pricelist.configuration'
-
-entity.price_list_item_type.collection:
-  title: 'Price list item types'
-  route_name: 'entity.price_list_item_type.collection'
-  description: 'Manage fields, form and display settings for your price list items.'
-  parent: 'commerce_pricelist.configuration'

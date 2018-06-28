@@ -5,6 +5,8 @@
  * Contains commerce_pricelist.module..
  */
 
+use Drupal\commerce\PurchasableEntityInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Routing\RouteMatchInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\Entity\EntityInterface;
@@ -20,9 +22,35 @@ function commerce_pricelist_help($route_name, RouteMatchInterface $route_match) 
       $output .= '<h3>' . t('About') . '</h3>';
       $output .= '<p>' . t('Set product prices through price lists') . '</p>';
       return $output;
-
-    default:
   }
+}
+
+/**
+ * Implements hook_entity_bundle_info().
+ */
+function commerce_pricelist_entity_bundle_info() {
+  $bundles = [];
+
+  $entity_types = \Drupal::entityTypeManager()->getDefinitions();
+  $purchasable_entities = array_filter($entity_types, function (EntityTypeInterface $entity_type) {
+    return $entity_type->entityClassImplements(PurchasableEntityInterface::class);
+  });
+
+  foreach ($purchasable_entities as $entity_type) {
+    $bundles['commerce_price_list'][$entity_type->id()] = [
+      'label' => $entity_type->getLabel(),
+      'description' => t('Create a price list for @label', ['@label' => $entity_type->getLowercaseLabel()]),
+      'translatable' => FALSE,
+      'provider' => 'commerce_pricelist',
+    ];
+    $bundles['commerce_price_list_item'][$entity_type->id()] = [
+      'label' => $entity_type->getLabel(),
+      'description' => t('Create a price list for @label', ['@label' => $entity_type->getLowercaseLabel()]),
+      'translatable' => FALSE,
+      'provider' => 'commerce_pricelist',
+    ];
+  }
+  return $bundles;
 }
 
 /**
@@ -59,7 +87,7 @@ function commerce_pricelist_field_widget_form_alter(&$element, FormStateInterfac
   $field_definition = $context['items']->getFieldDefinition();
   $field_name = $field_definition->getName();
   $entity_type = $field_definition->getTargetEntityTypeId();
-  if ($field_name == 'purchased_entity' && $entity_type == 'price_list_item') {
+  if ($field_name == 'purchased_entity' && $entity_type == 'commerce_price_list_item') {
     if (!empty($element['target_id']['#target_type'])) {
       $target_type = \Drupal::service('entity_type.manager')->getDefinition($element['target_id']['#target_type']);
       $element['target_id']['#title'] = $target_type->getLabel();
@@ -74,7 +102,7 @@ function commerce_pricelist_field_widget_form_alter(&$element, FormStateInterfac
  * Implements hook_entity_update().
  */
 function commerce_pricelist_entity_update(EntityInterface $entity) {
-  if ($entity instanceof \Drupal\commerce\PurchasableEntityInterface) {
+  if ($entity instanceof PurchasableEntityInterface) {
     /** @var \Drupal\commerce\PurchasableEntityInterface $entity */
     foreach ($entity->get('field_price_list_item') as $item) {
       $entityAdaper = $item->get('entity')->getTarget();
