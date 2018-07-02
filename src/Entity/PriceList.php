@@ -2,6 +2,7 @@
 
 namespace Drupal\commerce_pricelist\Entity;
 
+use Drupal\commerce_store\Entity\StoreInterface;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Entity\EntityPublishedTrait;
 use Drupal\Core\Entity\EntityStorageInterface;
@@ -9,6 +10,7 @@ use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\commerce\Entity\CommerceContentEntityBase;
 use Drupal\Core\Entity\EntityChangedTrait;
 use Drupal\Core\Entity\EntityTypeInterface;
+use Drupal\user\RoleInterface;
 use Drupal\user\UserInterface;
 
 /**
@@ -40,10 +42,11 @@ use Drupal\user\UserInterface;
  *     },
  *     "route_provider" = {
  *       "default" = "Drupal\entity\Routing\AdminHtmlRouteProvider",
- *       "delete-multiple" = "Drupal\entity\Routing\DeleteMultipleRouteProvider",
+ *       "delete-multiple" =
+ *   "Drupal\entity\Routing\DeleteMultipleRouteProvider",
  *     },
  *   },
- *   admin_permission = "administer price_list",
+ *   admin_permission = "administer commerce_price_list",
  *   base_table = "price_list",
  *   data_table = "price_list_field_data",
  *   entity_keys = {
@@ -51,7 +54,7 @@ use Drupal\user\UserInterface;
  *     "bundle" = "type",
  *     "label" = "name",
  *     "uuid" = "uuid",
- *     "uid" = "user_id",
+ *     "uid" = "uid",
  *     "published" = "status",
  *   },
  *   links = {
@@ -69,13 +72,6 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
 
   use EntityChangedTrait;
   use EntityPublishedTrait;
-
-  /**
-   * {@inheritdoc}
-   */
-  public function getType() {
-    return $this->bundle();
-  }
 
   /**
    * {@inheritdoc}
@@ -111,21 +107,21 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
    * {@inheritdoc}
    */
   public function getOwner() {
-    return $this->get('user_id')->entity;
+    return $this->get('uid')->entity;
   }
 
   /**
    * {@inheritdoc}
    */
   public function getOwnerId() {
-    return $this->get('user_id')->target_id;
+    return $this->get('uid')->target_id;
   }
 
   /**
    * {@inheritdoc}
    */
   public function setOwnerId($uid) {
-    $this->set('user_id', $uid);
+    $this->set('uid', $uid);
     return $this;
   }
 
@@ -133,7 +129,7 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
    * {@inheritdoc}
    */
   public function setOwner(UserInterface $account) {
-    $this->set('user_id', $account->id());
+    $this->set('uid', $account->id());
     return $this;
   }
 
@@ -173,9 +169,39 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
   /**
    * {@inheritdoc}
    */
+  public function getStore() {
+    return $this->getTranslatedReferencedEntity('store_id');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setStore(StoreInterface $store) {
+    $this->set('store_id', $store->id());
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function getStoreId() {
+    return $this->get('store_id')->target_id;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setStoreId($store_id) {
+    $this->set('store_id', $store_id);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getItemsIds() {
     $price_list_item_ids = [];
-    foreach ($this->get('field_price_list_item') as $field_item) {
+    foreach ($this->get('items') as $field_item) {
       $price_list_item_ids[] = $field_item->target_id;
     }
     return $price_list_item_ids;
@@ -185,8 +211,46 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
    * {@inheritdoc}
    */
   public function getItems() {
-    return $this->getTranslatedReferencedEntities('field_price_list_item');
+    $items = $this->get('items')->referencedEntities();
+    return $items;
   }
+
+  public function getTargetUserId() {
+    return $this->get('target_uid')->target_id;
+  }
+
+  public function getTargetUser() {
+    return $this->get('target_uid')->entity;
+  }
+
+  public function setTargetUserId($uid) {
+    $this->set('target_uid', $uid);
+    return $this;
+  }
+
+  public function setTargetUser(UserInterface $user) {
+    $this->set('target_uid', $user->id());
+    return $this;
+  }
+
+  public function getTargetRoleId() {
+    return $this->get('target_role')->target_id;
+  }
+
+  public function getTargetRole() {
+    return $this->get('target_role')->entity;
+  }
+
+  public function setTargetRoleId($rid) {
+    $this->set('target_role', $rid);
+    return $this;
+  }
+
+  public function setTargetRole(RoleInterface $role) {
+    $this->set('target_role', $role->id());
+    return $this;
+  }
+
 
   /**
    * {@inheritdoc}
@@ -195,7 +259,7 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
     parent::postSave($storage, $update);
 
     // Ensure there's a back-reference on each price list item.
-    foreach ($this->field_price_list_item as $item) {
+    foreach ($this->items as $item) {
       $price_list_item = $item->entity;
       if ($price_list_item->price_list_id->isEmpty()) {
         $price_list_item->price_list_id = $this->id();
@@ -209,18 +273,17 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
    */
   public static function postDelete(EntityStorageInterface $storage, array $entities) {
     // Delete the price list item of a deleted price list.
-    $price_list_items = [];
-
+    /** @var \Drupal\commerce_pricelist\Entity\PriceListInterface $entity */
     foreach ($entities as $entity) {
-      if (empty($entity->field_price_list_item)) {
+      $price_list_items = [];
+      if ($entity->get('items')->isEmpty()) {
         continue;
       }
-      foreach ($entity->field_price_list_item as $item) {
+      foreach ($entity->items as $item) {
         $price_list_items[$item->target_id] = $item->entity;
       }
 
-      $price_list_item_storage = \Drupal::service('entity_type.manager')
-        ->getStorage('commerce_price_list_item');
+      $price_list_item_storage = \Drupal::service('entity_type.manager')->getStorage('commerce_price_list_item');
       $price_list_item_storage->delete($price_list_items);
     }
   }
@@ -231,14 +294,13 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
     $fields = parent::baseFieldDefinitions($entity_type);
 
+    // Add the published field.
+    $fields += static::publishedBaseFieldDefinitions($entity_type);
+
     $fields['weight'] = BaseFieldDefinition::create('integer')
       ->setLabel(t('Weight'))
-      ->setDescription(t('The weight of this pricelist in relation to other pricelists.'))
+      ->setDescription(t('The weight of this pricelist in relation to other price lists.'))
       ->setDefaultValue(0);
-    $fields['status'] = BaseFieldDefinition::create('boolean')
-      ->setLabel(t('Publishing status'))
-      ->setDescription(t('A boolean indicating whether the Price list is published.'))
-      ->setDefaultValue(TRUE);
 
     $fields['name'] = BaseFieldDefinition::create('string')
       ->setLabel(t('Name'))
@@ -249,11 +311,6 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
         'text_processing' => 0,
       ])
       ->setDefaultValue('')
-      ->setDisplayOptions('view', [
-        'label' => 'above',
-        'type' => 'string',
-        'weight' => 1,
-      ])
       ->setDisplayOptions('form', [
         'type' => 'string_textfield',
         'weight' => 1,
@@ -261,19 +318,12 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
 
-    $fields['user_id'] = BaseFieldDefinition::create('entity_reference')
-      ->setLabel(t('Authored by'))
-      ->setDescription(t('The user ID of author of the Price list entity.'))
-      ->setRevisionable(TRUE)
+    $fields['uid'] = BaseFieldDefinition::create('entity_reference')
+      ->setLabel(t('Created by'))
+      ->setDescription(t('The user ID of author of the price list entity.'))
       ->setSetting('target_type', 'user')
       ->setSetting('handler', 'default')
-      ->setDefaultValueCallback('Drupal\node\Entity\Node::getCurrentUserId')
-      ->setTranslatable(TRUE)
-      ->setDisplayOptions('view', [
-        'label' => 'hidden',
-        'type' => 'author',
-        'weight' => 2,
-      ])
+      ->setDefaultValueCallback('\Drupal\commerce_pricelist\Entity\PriceList::getCurrentUserId')
       ->setDisplayOptions('form', [
         'type' => 'entity_reference_autocomplete',
         'weight' => 2,
@@ -289,46 +339,75 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
 
     $fields['start_date'] = BaseFieldDefinition::create('datetime')
       ->setLabel(t('Start date'))
-      ->setDescription(t('The start date of the Price list entity.'))
-      ->setRevisionable(TRUE)
-      ->setSettings([
-        'datetime_type' => 'datetime',
-      ])
-      ->setDefaultValue('')
-      ->setDisplayOptions('view', [
-        'label' => 'above',
-        'type' => 'datetime_default',
-        'settings' => [
-          'format_type' => 'medium',
-        ],
-        'weight' => 3,
-      ])
+      ->setDescription(t('The date the price list becomes valid.'))
+      ->setRequired(TRUE)
+      ->setSetting('datetime_type', 'date')
+      ->setDefaultValueCallback('Drupal\commerce_pricelist\Entity\PriceList::getDefaultStartDate')
       ->setDisplayOptions('form', [
         'type' => 'datetime_default',
-        'weight' => 3,
+        'weight' => 5,
+      ]);
+
+    $fields['end_date'] = BaseFieldDefinition::create('datetime')
+      ->setLabel(t('End date'))
+      ->setDescription(t('The date after which the price list is invalid.'))
+      ->setRequired(FALSE)
+      ->setSetting('datetime_type', 'date')
+      ->setDisplayOptions('form', [
+        'type' => 'commerce_end_date',
+        'weight' => 6,
+      ]);
+
+    $fields['items'] = BaseFieldDefinition::create('entity_reference')
+      ->setLabel(t('List items'))
+      ->setDescription(t('List items with prices.'))
+      ->setCardinality(BaseFieldDefinition::CARDINALITY_UNLIMITED)
+      ->setRequired(FALSE)
+      ->setSetting('target_type', 'commerce_price_list_item')
+      ->setSetting('handler', 'default');
+
+    $fields['store_id'] = BaseFieldDefinition::create('entity_reference')
+      ->setLabel(t('Store'))
+      ->setDescription(t('The store to which the order belongs.'))
+      ->setCardinality(1)
+      ->setRequired(TRUE)
+      ->setSetting('target_type', 'commerce_store')
+      ->setSetting('handler', 'default')
+      ->setTranslatable(TRUE)
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE);
+
+    $fields['target_uid'] = BaseFieldDefinition::create('entity_reference')
+      ->setLabel(t('User'))
+      ->setDescription(t('The user the price list is for.'))
+      ->setSetting('target_type', 'user')
+      ->setSetting('handler', 'default')
+      ->setDisplayOptions('form', [
+        'type' => 'entity_reference_autocomplete',
+        'weight' => 2,
+        'settings' => [
+          'match_operator' => 'CONTAINS',
+          'size' => '60',
+          'autocomplete_type' => 'tags',
+          'placeholder' => '',
+        ],
       ])
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
 
-    $fields['end_date'] = BaseFieldDefinition::create('datetime')
-      ->setLabel(t('End date'))
-      ->setDescription(t('The end date of the Price list entity.'))
-      ->setRevisionable(TRUE)
-      ->setSettings([
-        'datetime_type' => 'datetime',
-      ])
-      ->setDefaultValue('')
-      ->setDisplayOptions('view', [
-        'label' => 'above',
-        'type' => 'datetime_default',
-        'settings' => [
-          'format_type' => 'medium',
-        ],
-        'weight' => 4,
-      ])
+    $fields['target_role'] = BaseFieldDefinition::create('entity_reference')
+      ->setLabel(t('Role'))
+      ->setDescription(t('The role the price list is for.'))
+      ->setSetting('target_type', 'user_role')
       ->setDisplayOptions('form', [
-        'type' => 'datetime_default',
-        'weight' => 4,
+        'type' => 'entity_reference_autocomplete',
+        'weight' => 2,
+        'settings' => [
+          'match_operator' => 'CONTAINS',
+          'size' => '60',
+          'autocomplete_type' => 'tags',
+          'placeholder' => '',
+        ],
       ])
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
@@ -342,6 +421,55 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
       ->setDescription(t('The time that the entity was last edited.'));
 
     return $fields;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public static function bundleFieldDefinitions(EntityTypeInterface $entity_type, $bundle, array $base_field_definitions) {
+    $fields = [];
+    $fields['items'] = clone $base_field_definitions['items'];
+    $fields['items']->setSetting('target_type', $bundle);
+    return $fields;
+  }
+
+  /**
+   * Default value callback for 'start_date' base field definition.
+   *
+   * @see ::baseFieldDefinitions()
+   *
+   * @return string
+   *   The default value (date string).
+   */
+  public static function getDefaultStartDate() {
+    $timestamp = \Drupal::time()->getRequestTime();
+    return gmdate('Y-m-d', $timestamp);
+  }
+
+  /**
+   * Default value callback for 'end_date' base field definition.
+   *
+   * @see ::baseFieldDefinitions()
+   *
+   * @return int
+   *   The default value (date string).
+   */
+  public static function getDefaultEndDate() {
+    // Today + 1 year.
+    $timestamp = \Drupal::time()->getRequestTime();
+    return gmdate('Y-m-d', $timestamp + 31536000);
+  }
+
+  /**
+   * Default value callback for 'uid' base field definition.
+   *
+   * @see ::baseFieldDefinitions()
+   *
+   * @return array
+   *   An array of default values.
+   */
+  public static function getCurrentUserId() {
+    return [\Drupal::currentUser()->id()];
   }
 
 }

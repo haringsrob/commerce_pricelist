@@ -2,11 +2,14 @@
 
 namespace Drupal\commerce_pricelist\Entity;
 
+use Drupal\commerce_store\Entity\StoreInterface;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityChangedInterface;
 use Drupal\Core\Entity\EntityPublishedInterface;
 use Drupal\user\EntityOwnerInterface;
+use Drupal\user\RoleInterface;
+use Drupal\user\UserInterface;
 
 /**
  * Provides an interface for defining price list entities.
@@ -14,14 +17,6 @@ use Drupal\user\EntityOwnerInterface;
  * @ingroup commerce_pricelist
  */
 interface PriceListInterface extends ContentEntityInterface, EntityChangedInterface, EntityOwnerInterface, EntityPublishedInterface {
-
-  /**
-   * Gets the price list type.
-   *
-   * @return string
-   *   The price list type.
-   */
-  public function getType();
 
   /**
    * Gets the price list name.
@@ -62,6 +57,14 @@ interface PriceListInterface extends ContentEntityInterface, EntityChangedInterf
   public function setCreatedTime($timestamp);
 
   /**
+   * Gets the price list's item IDs.
+   *
+   * @return int[]
+   *   The price list item IDs.
+   */
+  public function getItemsIds();
+
+  /**
    * Gets the price list's item list.
    *
    * @return \Drupal\commerce_pricelist\Entity\PriceListItemInterface[]
@@ -94,5 +97,114 @@ interface PriceListInterface extends ContentEntityInterface, EntityChangedInterf
    *   The price list end date, or NULL
    */
   public function getEndDate();
+
+  /**
+   * Gets the store.
+   *
+   * @return \Drupal\commerce_store\Entity\StoreInterface|null
+   *   The store entity, or null.
+   */
+  public function getStore();
+
+  /**
+   * Sets the store.
+   *
+   * @param \Drupal\commerce_store\Entity\StoreInterface $store
+   *   The store entity.
+   *
+   * @return $this
+   */
+  public function setStore(StoreInterface $store);
+
+  /**
+   * Gets the store ID.
+   *
+   * @return int
+   *   The store ID.
+   */
+  public function getStoreId();
+
+  /**
+   * Sets the store ID.
+   *
+   * @param int $store_id
+   *   The store ID.
+   *
+   * @return $this
+   */
+  public function setStoreId($store_id);
+
+  /**
+   * Gets the target user ID this price list is for.
+   *
+   * @return int
+   *   The target user ID.
+   */
+  public function getTargetUserId();
+
+  /**
+   * Gets the target user this price list is for.
+   *
+   * @return \Drupal\user\UserInterface
+   *   The target user.
+   */
+  public function getTargetUser();
+
+  /**
+   * Sets the target user ID this price list is for.
+   *
+   * @param int $uid
+   *   The target user ID.
+   *
+   * @return $this
+   */
+  public function setTargetUserId($uid);
+
+  /**
+   * Sets the target user this price list is for.
+   *
+   * @param \Drupal\user\UserInterface $user
+   *   The target user.
+   *
+   * @return $this
+   */
+  public function setTargetUser(UserInterface $user);
+
+  /**
+   * Gets the target role this price list is for.
+   *
+   * @return string
+   *   The target role ID.
+   */
+  public function getTargetRoleId();
+
+  /**
+   * Gets the target role this price list is for.
+   *
+   * @return \Drupal\user\RoleInterface
+   *   The target role.
+   */
+  public function getTargetRole();
+
+  /**
+   * Sets the target role ID.
+   *
+   * @param string $rid
+   *   The role ID.
+   *
+   * @return $this
+   */
+  public function setTargetRoleId($rid);
+
+  /**
+   * Sets the target role.
+   *
+   * @param \Drupal\user\RoleInterface $role
+   *   The target role.
+   *
+   * @return $this
+   */
+  public function setTargetRole(RoleInterface $role);
+
 
 }

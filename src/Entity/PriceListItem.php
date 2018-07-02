@@ -4,6 +4,7 @@ namespace Drupal\commerce_pricelist\Entity;
 
 use Drupal\commerce_price\Price;
 use Drupal\commerce\Entity\CommerceContentEntityBase;
+use Drupal\Core\Entity\EntityPublishedTrait;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Entity\EntityChangedTrait;
 use Drupal\Core\Entity\EntityTypeInterface;
@@ -42,13 +43,14 @@ use Drupal\user\UserInterface;
  *     "bundle" = "type",
  *     "label" = "name",
  *     "uuid" = "uuid",
- *     "status" = "status",
+ *     "published" = "status",
  *   },
  * )
  */
 class PriceListItem extends CommerceContentEntityBase implements PriceListItemInterface {
 
   use EntityChangedTrait;
+  use EntityPublishedTrait;
 
   /**
    * {@inheritdoc}
@@ -215,31 +217,11 @@ class PriceListItem extends CommerceContentEntityBase implements PriceListItemIn
   /**
    * {@inheritdoc}
    */
-  public function isActive() {
-    return (bool) $this->getEntityKey('status');
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setActive() {
-    $this->set('status', (bool) TRUE);
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
-  public function setInactive() {
-    $this->set('status', (bool) FALSE);
-    return $this;
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   public static function baseFieldDefinitions(EntityTypeInterface $entity_type) {
     $fields = parent::baseFieldDefinitions($entity_type);
+
+    // Add the published field.
+    $fields += static::publishedBaseFieldDefinitions($entity_type);
 
     $fields['uid'] = BaseFieldDefinition::create('entity_reference')
       ->setLabel(t('Author'))
@@ -334,18 +316,6 @@ class PriceListItem extends CommerceContentEntityBase implements PriceListItemIn
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
 
-    $fields['status'] = BaseFieldDefinition::create('boolean')
-      ->setLabel(t('Active'))
-      ->setDescription(t('Whether the price list item is active.'))
-      ->setDefaultValue(TRUE)
-      ->setRequired(TRUE)
-      ->setTranslatable(TRUE)
-      ->setDisplayOptions('form', [
-        'type' => 'boolean_checkbox',
-        'weight' => 99,
-      ])
-      ->setDisplayConfigurable('form', TRUE);
-
     $fields['created'] = BaseFieldDefinition::create('created')
       ->setLabel(t('Created'))
       ->setDescription(t('The time when the price list item was created.'))
@@ -364,8 +334,12 @@ class PriceListItem extends CommerceContentEntityBase implements PriceListItemIn
    * {@inheritdoc}
    */
   public static function bundleFieldDefinitions(EntityTypeInterface $entity_type, $bundle, array $base_field_definitions) {
-    $purchased_entity_type = \Drupal::entityTypeManager()->getDefinition($bundle);
     $fields = [];
+
+    $fields['price_list_id'] = clone $base_field_definitions['price_list_id'];
+    $fields['price_list_id']->setSetting('target_type', $bundle);
+
+    $purchased_entity_type = \Drupal::entityTypeManager()->getDefinition($bundle);
     $fields['purchased_entity'] = clone $base_field_definitions['purchased_entity'];
     $fields['purchased_entity']->setSetting('target_type', $purchased_entity_type->id());
     $fields['purchased_entity']->setLabel($purchased_entity_type->getLabel());

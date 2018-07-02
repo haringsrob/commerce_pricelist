@@ -2,8 +2,6 @@
 
 namespace Drupal\Tests\commerce_pricelist\Kernel;
 
-use Drupal\commerce\PurchasableEntityInterface;
-
 /**
  * Tests the the action of saving purchased entity.
  *

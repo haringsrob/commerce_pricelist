@@ -5,6 +5,7 @@ namespace Drupal\commerce_pricelist\Entity;
 use Drupal\commerce_price\Price;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityChangedInterface;
+use Drupal\Core\Entity\EntityPublishedInterface;
 use Drupal\user\EntityOwnerInterface;
 
 /**
@@ -12,7 +13,7 @@ use Drupal\user\EntityOwnerInterface;
  *
  * @ingroup commerce_pricelist
  */
-interface PriceListItemInterface extends ContentEntityInterface, EntityChangedInterface, EntityOwnerInterface {
+interface PriceListItemInterface extends ContentEntityInterface, EntityChangedInterface, EntityOwnerInterface, EntityPublishedInterface {
 
   /**
    * Gets the price list item name.
@@ -154,27 +155,5 @@ interface PriceListItemInterface extends ContentEntityInterface, EntityChangedIn
    * @return $this
    */
   public function setPrice(Price $price);
-
-  /**
-   * Get whether or not the price list item is active.
-   *
-   * @return bool
-   *   TRUE if the rice list item is acive, FALSE otherwise.
-   */
-  public function isActive();
-
-  /**
-   * Sets the price list item active.
-   *
-   * @return $this
-   */
-  public function setActive();
-
-  /**
-   * Set the price list item inactive.
-   *
-   * @return $this
-   */
-  public function setInactive();
 
 }
