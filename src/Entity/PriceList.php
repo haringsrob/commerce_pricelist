@@ -215,42 +215,65 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
     return $items;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getTargetUserId() {
     return $this->get('target_uid')->target_id;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getTargetUser() {
     return $this->get('target_uid')->entity;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function setTargetUserId($uid) {
     $this->set('target_uid', $uid);
     return $this;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function setTargetUser(UserInterface $user) {
     $this->set('target_uid', $user->id());
     return $this;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getTargetRoleId() {
     return $this->get('target_role')->target_id;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function getTargetRole() {
     return $this->get('target_role')->entity;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function setTargetRoleId($rid) {
     $this->set('target_role', $rid);
     return $this;
   }
 
+  /**
+   * {@inheritdoc}
+   */
   public function setTargetRole(RoleInterface $role) {
     $this->set('target_role', $role->id());
     return $this;
   }
-
 
   /**
    * {@inheritdoc}
