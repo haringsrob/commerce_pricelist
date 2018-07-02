@@ -106,7 +106,7 @@ class PriceListItem extends CommerceContentEntityBase implements PriceListItemIn
    * {@inheritdoc}
    */
   public function setQuantity($quantity) {
-    $this->set('quantity', $quantity);
+    $this->set('quantity', (string) $quantity);
     return $this;
   }
 

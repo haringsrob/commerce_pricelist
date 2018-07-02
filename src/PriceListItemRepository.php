@@ -41,7 +41,7 @@ class PriceListItemRepository implements PriceListItemRepositoryInterface {
     $query = $this->priceListItemStorage->getQuery();
     $query->exists('price_list_id');
     $query->condition('type', $entity->getEntityTypeId());
-    $query->condition('quantity', $quantity, '>=');
+    $query->condition('quantity', $quantity, '<=');
     $query->condition('purchased_entity', $entity->id());
     $query->condition('price_list_id.entity.store_id', $context->getStore()->id());
     $query->condition('price_list_id.entity.start_date', $today, '<=');
@@ -58,8 +58,10 @@ class PriceListItemRepository implements PriceListItemRepositoryInterface {
       ->notExists('price_list_id.entity.target_role')
     );
     $query->sort('weight');
-
-    return $this->priceListItemStorage->loadMultiple($query->execute());
+    $results = $query->execute();
+    $price_list_items = $this->priceListItemStorage->loadMultiple($results);
+    // @todo fire an event here, like FilterPriceListItems
+    return $price_list_items;
   }
 
 }

@@ -88,6 +88,19 @@ class PriceListItemRepositoryTest extends PriceListKernelTestBase {
     $this->assertEmpty($resolved_price_list_items);
   }
 
+  public function testPriceListWithQuantity() {
+    $context = new Context($this->user, $this->store);
+    $resolver = $this->container->get('commerce_pricselist.price_list_item_repository');
+
+    $this->priceListItem->setQuantity(10);
+    $this->priceListItem->save();
+
+    $resolved_price_list_items = $resolver->loadItems($this->variation, 1, $context);
+    $this->assertEmpty($resolved_price_list_items);
+    $resolved_price_list_items = $resolver->loadItems($this->variation, 15, $context);
+    $this->assertNotEmpty($resolved_price_list_items);
+  }
+
   /**
    * Tests resolving a price list item where the price list has start/end dates.
    */
