@@ -241,8 +241,7 @@ class PriceListItem extends CommerceContentEntityBase implements PriceListItemIn
       ->setLabel(t('Price list'))
       ->setDescription(t('The parent price list of the Price list item entity.'))
       ->setSetting('target_type', 'commerce_price_list')
-      ->setRequired(TRUE)
-      ->setDisplayConfigurable('view', TRUE);
+      ->setReadOnly(TRUE);
 
     $fields['purchased_entity'] = BaseFieldDefinition::create('entity_reference')
       ->setLabel(t('Purchased entity'))
@@ -288,7 +287,7 @@ class PriceListItem extends CommerceContentEntityBase implements PriceListItemIn
         'max_length' => 50,
         'text_processing' => 0,
       ])
-      ->setDefaultValue('')
+      ->setDefaultValue(1)
       ->setDisplayOptions('view', [
         'label' => 'above',
         'type' => 'integer',
@@ -337,7 +336,7 @@ class PriceListItem extends CommerceContentEntityBase implements PriceListItemIn
     $fields = [];
 
     $fields['price_list_id'] = clone $base_field_definitions['price_list_id'];
-    $fields['price_list_id']->setSetting('target_type', $bundle);
+    $fields['price_list_id']->setSetting('handler_settings', ['target_bundles' => [$bundle => $bundle]]);
 
     $purchased_entity_type = \Drupal::entityTypeManager()->getDefinition($bundle);
     $fields['purchased_entity'] = clone $base_field_definitions['purchased_entity'];

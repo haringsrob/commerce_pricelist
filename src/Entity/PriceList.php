@@ -284,6 +284,12 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
     // Ensure there's a back-reference on each price list item.
     foreach ($this->items as $item) {
       $price_list_item = $item->entity;
+
+      // @TODO: NO IDEA WHAT IS HAPPENING. Somehow a variation is here?!
+      if (!$price_list_item instanceof PriceListItemInterface) {
+        continue;
+      }
+
       if ($price_list_item->price_list_id->isEmpty()) {
         $price_list_item->price_list_id = $this->id();
         $price_list_item->save();

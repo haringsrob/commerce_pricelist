@@ -21,9 +21,18 @@ class PriceListItemTest extends PriceListKernelTestBase {
     ]);
     $price_list_item->save();
 
+    $this->assertTrue($price_list_item->hasField('price_list_id'));
+
     $price_list_target_type = $price_list_item->get('price_list_id')->getFieldDefinition()->getSetting('target_type');
-    $this->assertEquals('commerce_product_variation', $price_list_target_type);
-    $purchased_entity_target_type = $price_list_item->get('price_list_id')->getFieldDefinition()->getSetting('target_type');
+    $this->assertEquals('commerce_price_list', $price_list_target_type);
+    $price_list_target_type = $price_list_item->get('price_list_id')->getFieldDefinition()->getSetting('handler_settings');
+    $this->assertEquals([
+      'target_bundles' => [
+        'commerce_product_variation' => 'commerce_product_variation',
+      ],
+    ], $price_list_target_type);
+
+    $purchased_entity_target_type = $price_list_item->get('purchased_entity')->getFieldDefinition()->getSetting('target_type');
     $this->assertEquals('commerce_product_variation', $purchased_entity_target_type);
 
     $price_list_item->setQuantity(4);
