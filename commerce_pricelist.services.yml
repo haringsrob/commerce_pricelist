@@ -1,6 +1,6 @@
 services:
-  commerce_pricselist.price_list_item_resolver:
-    class: Drupal\commerce_pricelist\Resolver\PriceListItemResolver
+  commerce_pricselist.price_list_item_repository:
+    class: Drupal\commerce_pricelist\PriceListItemRepository
     arguments: ['@entity_type.manager', '@datetime.time']
   commerce_pricelist.default_base_price_resolver:
     class: Drupal\commerce_pricelist\Resolver\PriceListDefaultBasePriceResolver

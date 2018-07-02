@@ -1,11 +1,11 @@
 <?php
 
-namespace Drupal\commerce_pricelist\Resolver;
+namespace Drupal\commerce_pricelist;
 
 use Drupal\commerce\Context;
 use Drupal\commerce\PurchasableEntityInterface;
 
-interface PriceListItemResolverInterface {
+interface PriceListItemRepositoryInterface {
 
   /**
    * Resolves available price lists of a given purchasable entity.
@@ -20,6 +20,6 @@ interface PriceListItemResolverInterface {
    * @return \Drupal\commerce_pricelist\Entity\PriceListItemInterface[]
    *   An array of price list items.
    */
-  public function resolve(PurchasableEntityInterface $entity, $quantity, Context $context);
+  public function loadItems(PurchasableEntityInterface $entity, $quantity, Context $context);
 
 }

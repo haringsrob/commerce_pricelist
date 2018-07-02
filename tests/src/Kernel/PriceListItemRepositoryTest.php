@@ -10,7 +10,7 @@ use Drupal\commerce_product\Entity\ProductVariation;
 use Drupal\Core\Datetime\DrupalDateTime;
 use Drupal\user\Entity\Role;
 
-class PriceListItemResolverTest extends PriceListKernelTestBase {
+class PriceListItemRepositoryTest extends PriceListKernelTestBase {
 
   /**
    * The test price list.
@@ -64,11 +64,11 @@ class PriceListItemResolverTest extends PriceListKernelTestBase {
   /**
    * Tests resolving a price list item with no price list conditons.
    */
-  public function testResolvingSimplePriceList() {
+  public function testSimplePriceList() {
     $context = new Context($this->user, $this->store);
-    $resolver = $this->container->get('commerce_pricselist.price_list_item_resolver');
+    $resolver = $this->container->get('commerce_pricselist.price_list_item_repository');
 
-    $resolved_price_list_items = $resolver->resolve($this->variation, 1, $context);
+    $resolved_price_list_items = $resolver->loadItems($this->variation, 1, $context);
     $this->assertNotEmpty($resolved_price_list_items);
 
     /** @var \Drupal\commerce_pricelist\Entity\PriceListItem $resolved_price_list_item */
@@ -84,29 +84,29 @@ class PriceListItemResolverTest extends PriceListKernelTestBase {
     ]);
     $other_variation->save();
 
-    $resolved_price_list_items = $resolver->resolve($other_variation, 1, $context);
+    $resolved_price_list_items = $resolver->loadItems($other_variation, 1, $context);
     $this->assertEmpty($resolved_price_list_items);
   }
 
   /**
    * Tests resolving a price list item where the price list has start/end dates.
    */
-  public function testResolvingPriceListWithDates() {
+  public function testPriceListWithDates() {
     $context = new Context($this->user, $this->store);
-    $resolver = $this->container->get('commerce_pricselist.price_list_item_resolver');
+    $resolver = $this->container->get('commerce_pricselist.price_list_item_repository');
 
     $this->priceList->setStartDate(new DrupalDateTime('-3 months'));
     $this->priceList->setEndDate(new DrupalDateTime('+1 year'));
     $this->priceList->save();
 
-    $resolved_price_list_items = $resolver->resolve($this->variation, 1, $context);
+    $resolved_price_list_items = $resolver->loadItems($this->variation, 1, $context);
     $this->assertNotEmpty($resolved_price_list_items);
 
     // Set the price list to start in the future.
     $this->priceList->setStartDate(new DrupalDateTime('+1 month'));
     $this->priceList->save();
 
-    $resolved_price_list_items = $resolver->resolve($this->variation, 1, $context);
+    $resolved_price_list_items = $resolver->loadItems($this->variation, 1, $context);
     $this->assertEmpty($resolved_price_list_items);
 
     // Expired.
@@ -114,45 +114,45 @@ class PriceListItemResolverTest extends PriceListKernelTestBase {
     $this->priceList->setEndDate(new DrupalDateTime('-1 month'));
     $this->priceList->save();
 
-    $resolved_price_list_items = $resolver->resolve($this->variation, 1, $context);
+    $resolved_price_list_items = $resolver->loadItems($this->variation, 1, $context);
     $this->assertEmpty($resolved_price_list_items);
   }
 
-  public function testResolvingWithStore() {
+  public function testWithStore() {
     $context = new Context($this->user, $this->store);
-    $resolver = $this->container->get('commerce_pricselist.price_list_item_resolver');
+    $resolver = $this->container->get('commerce_pricselist.price_list_item_repository');
 
     $new_store = $this->createStore();
     $this->priceList->setStore($new_store);
     $this->priceList->save();
 
-    $resolved_price_list_items = $resolver->resolve($this->variation, 1, $context);
+    $resolved_price_list_items = $resolver->loadItems($this->variation, 1, $context);
     $this->assertEmpty($resolved_price_list_items);
 
     $context = new Context($this->user, $new_store);
-    $resolved_price_list_items = $resolver->resolve($this->variation, 1, $context);
+    $resolved_price_list_items = $resolver->loadItems($this->variation, 1, $context);
     $this->assertNotEmpty($resolved_price_list_items);
   }
 
-  public function testResolvingByTargetUser() {
+  public function testByTargetUser() {
     $context = new Context($this->user, $this->store);
-    $resolver = $this->container->get('commerce_pricselist.price_list_item_resolver');
+    $resolver = $this->container->get('commerce_pricselist.price_list_item_repository');
 
     $target_user = $this->createUser();
     $this->priceList->setTargetUser($target_user);
     $this->priceList->save();
 
-    $resolved_price_list_items = $resolver->resolve($this->variation, 1, $context);
+    $resolved_price_list_items = $resolver->loadItems($this->variation, 1, $context);
     $this->assertEmpty($resolved_price_list_items);
 
     $context = new Context($target_user, $this->store);
-    $resolved_price_list_items = $resolver->resolve($this->variation, 1, $context);
+    $resolved_price_list_items = $resolver->loadItems($this->variation, 1, $context);
     $this->assertNotEmpty($resolved_price_list_items);
   }
 
-  public function testResolvingByTargetRole() {
+  public function testByTargetRole() {
     $context = new Context($this->user, $this->store);
-    $resolver = $this->container->get('commerce_pricselist.price_list_item_resolver');
+    $resolver = $this->container->get('commerce_pricselist.price_list_item_repository');
 
     $target_role = Role::create([
       'id' => strtolower($this->randomMachineName(8)),
@@ -161,13 +161,13 @@ class PriceListItemResolverTest extends PriceListKernelTestBase {
     $this->priceList->setTargetRole($target_role);
     $this->priceList->save();
 
-    $resolved_price_list_items = $resolver->resolve($this->variation, 1, $context);
+    $resolved_price_list_items = $resolver->loadItems($this->variation, 1, $context);
     $this->assertEmpty($resolved_price_list_items);
 
     $this->user->addRole($target_role->id());
     $this->user->save();
 
-    $resolved_price_list_items = $resolver->resolve($this->variation, 1, $context);
+    $resolved_price_list_items = $resolver->loadItems($this->variation, 1, $context);
     $this->assertNotEmpty($resolved_price_list_items);
   }
 

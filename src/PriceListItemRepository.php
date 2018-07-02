@@ -1,14 +1,13 @@
 <?php
 
-namespace Drupal\commerce_pricelist\Resolver;
+namespace Drupal\commerce_pricelist;
 
 use Drupal\commerce\Context;
 use Drupal\commerce\PurchasableEntityInterface;
 use Drupal\Component\Datetime\TimeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 
-// @todo: This is more of a repository than resolver.
-class PriceListItemResolver implements PriceListItemResolverInterface {
+class PriceListItemRepository implements PriceListItemRepositoryInterface {
 
   protected $priceListItemStorage;
 
@@ -36,7 +35,7 @@ class PriceListItemResolver implements PriceListItemResolverInterface {
   /**
    * {@inheritdoc}
    */
-  public function resolve(PurchasableEntityInterface $entity, $quantity, Context $context) {
+  public function loadItems(PurchasableEntityInterface $entity, $quantity, Context $context) {
     $today = gmdate('Y-m-d', $this->time->getRequestTime());
 
     $query = $this->priceListItemStorage->getQuery();
