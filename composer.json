@@ -10,5 +10,7 @@
     "issues": "http://drupal.org/project/issues/commerce_pricelist",
     "source": "http://cgit.drupalcode.org/commerce_pricelist"
   },
-  "require": { }
+  "require": {
+    "drupal/commerce": "^2.0"
+  }
 }
