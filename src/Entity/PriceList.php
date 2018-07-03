@@ -60,7 +60,7 @@ use Drupal\user\UserInterface;
  *   links = {
  *     "canonical" = "/price_list/{price_list}",
  *     "add-page" = "/price_list/add",
- *     "add-form" = "/price_list/add/{price_list_type}",
+ *     "add-form" = "/price_list/add/{type}",
  *     "edit-form" = "/price_list/{price_list}/edit",
  *     "delete-form" = "/price_list/{price_list}/delete",
  *     "delete-multiple-form" = "/admin/commerce/price_list/delete",
