@@ -28,7 +28,7 @@ class PriceListListBuilder extends EntityListBuilder {
    */
   public function buildRow(EntityInterface $entity) {
     /* @var $entity \Drupal\commerce_pricelist\Entity\PriceList */
-    $name_url = Url::fromRoute('entity.price_list.canonical', ['price_list' => $entity->id()]);
+    $name_url = Url::fromRoute('entity.commerce_price_list.edit_form', ['commerce_price_list' => $entity->id()]);
     $name = Link::fromTextAndUrl($entity->label(), $name_url);
     $row['id'] = $entity->id();
     $row['name'] = $name;

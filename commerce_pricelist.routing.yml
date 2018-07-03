@@ -5,3 +5,16 @@ commerce_pricelist.configuration:
     _title: 'Price List'
   requirements:
     _permission: 'access commerce administration pages'
+
+entity.commerce_price_list.import:
+  path: '/pricelist/{commerce_price_list}/import'
+  defaults:
+    _form: \Drupal\commerce_pricelist\Form\PriceListImportForm
+    _title: 'Import'
+  requirements:
+    _entity_access: 'commerce_price_list.update'
+  options:
+    _admin_route: TRUE
+    parameters:
+      commerce_price_list:
+        type: 'entity:commerce_price_list'
