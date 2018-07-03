@@ -1,5 +1,5 @@
-entity.price_list.add_form:
-  route_name: entity.price_list.add_page
+entity.commerce_price_list.add_form:
+  route_name: entity.commerce_price_list.add_page
   title: 'Add Price list'
   appears_on:
-    - entity.price_list.collection
+    - entity.commerce_price_list.collection

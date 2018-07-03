@@ -1,7 +1,7 @@
 # Price list menu items definition
-entity.price_list.collection:
+entity.commerce_price_list.collection:
   title: 'Price lists'
-  route_name: 'entity.price_list.collection'
+  route_name: 'entity.commerce_price_list.collection'
   description: 'Manage your price lists'
   parent: 'commerce.admin_commerce'
 

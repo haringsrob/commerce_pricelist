@@ -206,7 +206,7 @@ class PriceListForm extends ContentEntityForm {
         ]));
     }
 
-    $form_state->setRedirect('entity.price_list.collection');
+    $form_state->setRedirect('entity.commerce_price_list.collection');
   }
 
 }
