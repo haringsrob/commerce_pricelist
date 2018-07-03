@@ -136,21 +136,33 @@ class PriceListForm extends ContentEntityForm {
       '#attributes' => ['class' => ['entity-meta']],
       '#weight' => 99,
     ];
-
+    $form['author'] = [
+      '#type' => 'details',
+      '#title' => t('Owner information'),
+      '#group' => 'advanced',
+      '#attributes' => [
+        'class' => ['product-form-author'],
+      ],
+      '#weight' => 90,
+      '#optional' => TRUE,
+    ];
+    if (isset($form['uid'])) {
+      $form['uid']['#group'] = 'author';
+    }
     $form['price_list_store'] = [
       '#type' => 'details',
       '#title' => t('Price List Store'),
       '#open' => TRUE,
       '#group' => 'advanced',
-      '#access' => !empty($form['field_stores']['#access']),
+      '#access' => !empty($form['stores']['#access']),
       '#attributes' => [
         'class' => ['product-visibility-settings'],
       ],
       '#weight' => 30,
     ];
 
-    if (isset($form['field_stores'])) {
-      $form['field_stores']['#group'] = 'price_list_store';
+    if (isset($form['stores'])) {
+      $form['stores']['#group'] = 'price_list_store';
       $form['#after_build'][] = [get_class($this), 'hideEmptyVisibilitySettings'];
     }
 
@@ -187,7 +199,7 @@ class PriceListForm extends ContentEntityForm {
     $entity = $this->entity;
     $status = parent::save($form, $form_state);
 
-    foreach ($entity->field_price_list_item as $item) {
+    foreach ($entity->items as $item) {
       $itemEntity = $item->get('entity')->getTarget()->getValue();
       $itemEntity->setWeight($item->getValue()['weight']);
       $itemEntity->save();

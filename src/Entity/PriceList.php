@@ -58,13 +58,12 @@ use Drupal\user\UserInterface;
  *     "published" = "status",
  *   },
  *   links = {
- *     "canonical" = "/price_list/{price_list}",
- *     "add-page" = "/price_list/add",
- *     "add-form" = "/price_list/add/{type}",
- *     "edit-form" = "/price_list/{price_list}/edit",
- *     "delete-form" = "/price_list/{price_list}/delete",
- *     "delete-multiple-form" = "/admin/commerce/price_list/delete",
- *     "collection" = "/admin/commerce/price_lists",
+ *     "add-page" = "/pricelist/add",
+ *     "add-form" = "/pricelist/add/{type}",
+ *     "edit-form" = "/pricelist/{commerce_price_list}/edit",
+ *     "delete-form" = "/pricelist/{commerce_price_list}/delete",
+ *     "delete-multiple-form" = "/admin/commerce/pricelist/delete",
+ *     "collection" = "/admin/commerce/pricelists",
  *   },
  * )
  */
@@ -393,7 +392,14 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
       ->setCardinality(BaseFieldDefinition::CARDINALITY_UNLIMITED)
       ->setRequired(FALSE)
       ->setSetting('target_type', 'commerce_price_list_item')
-      ->setSetting('handler', 'default');
+      ->setSetting('handler', 'default')
+      ->setDisplayOptions('form', [
+        'type' => 'inline_entity_form_complex',
+        'weight' => 50,
+        'settings' => [],
+      ])
+      ->setDisplayConfigurable('form', TRUE)
+      ->setDisplayConfigurable('view', TRUE);
 
     $fields['store_id'] = BaseFieldDefinition::create('entity_reference')
       ->setLabel(t('Store'))
@@ -402,7 +408,6 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
       ->setRequired(TRUE)
       ->setSetting('target_type', 'commerce_store')
       ->setSetting('handler', 'default')
-      ->setTranslatable(TRUE)
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
 
@@ -458,7 +463,7 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
   public static function bundleFieldDefinitions(EntityTypeInterface $entity_type, $bundle, array $base_field_definitions) {
     $fields = [];
     $fields['items'] = clone $base_field_definitions['items'];
-    $fields['items']->setSetting('target_type', $bundle);
+    $fields['items']->setSetting('handler_settings', ['target_bundles' => [$bundle => $bundle]]);
     return $fields;
   }
 
