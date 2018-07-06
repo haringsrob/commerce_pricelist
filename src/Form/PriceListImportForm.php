@@ -5,15 +5,15 @@ namespace Drupal\commerce_pricelist\Form;
 use Drupal\commerce\PurchasableEntityInterface;
 use Drupal\commerce_price\Price;
 use Drupal\commerce_pricelist\CSVFileObject;
-use Drupal\commerce_pricelist\Entity\PriceList;
 use Drupal\commerce_pricelist\Entity\PriceListInterface;
-use Drupal\commerce_pricelist\Entity\PriceListItemInterface;
 use Drupal\Core\Field\FieldDefinitionInterface;
 use Drupal\Core\Field\Plugin\Field\FieldType\EntityReferenceItem;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
-use Symfony\Component\Validator\ConstraintViolation;
 
+/**
+ * Import form for a price list's items.
+ */
 class PriceListImportForm extends FormBase {
 
   /**
@@ -22,6 +22,11 @@ class PriceListImportForm extends FormBase {
    * @var int
    */
   const BATCH_SIZE = 25;
+
+
+  const STRATEGY_UPDATE_EXISTING = 'update_existing';
+
+  const STRATEGY_SKIP_EXISTING = 'skip_existing';
 
   /**
    * {@inheritdoc}
@@ -92,6 +97,7 @@ class PriceListImportForm extends FormBase {
       '#title' => 'List price CSV column name',
     ];
 
+    // @todo Should we show a confirm form if this is selected?
     $form['purge'] = [
       '#type' => 'checkbox',
       '#title' => 'Delete all items in this price list prior to import.',
@@ -101,8 +107,8 @@ class PriceListImportForm extends FormBase {
       '#type' => 'radios',
       '#title' => 'Import strategy',
       '#options' => [
-        'update_exists' => 'Update price list items for existing products in the import.',
-        'skip_exists' => 'Ignore existing price list items for existing products in the import.',
+        self::STRATEGY_UPDATE_EXISTING => 'Update price list items for existing products in the import.',
+        self::STRATEGY_SKIP_EXISTING => 'Ignore existing price list items for existing products in the import.',
       ],
       '#default_value' => 'update_exists',
       '#states' => [
@@ -112,6 +118,7 @@ class PriceListImportForm extends FormBase {
       ],
     ];
 
+    // @todo Perhaps we should always show a confirm form showing the settings.
     $form['actions']['#type'] = 'actions';
     $form['actions']['submit'] = [
       '#type' => 'submit',
@@ -157,16 +164,21 @@ class PriceListImportForm extends FormBase {
 
     if ($values['purge']) {
       $batch['operations'][] = [
-        [get_class($this), 'purgeExisting'],
+        [get_class($this), 'batchPurgeExisting'],
         [$form_state->get('price_list_id')],
       ];
     }
     $batch['operations'][] = [
-      [get_class($this), 'processBatch'],
-      [$file->getFileUri(), $columns, $values['strategy'], $form_state->get('price_list_id')],
+      [get_class($this), 'batchProcess'],
+      [
+        $file->getFileUri(),
+        $columns,
+        $values['strategy'],
+        $form_state->get('price_list_id'),
+      ],
     ];
     $batch['operations'][] = [
-      [get_class($this), 'deleteUploadedFile'],
+      [get_class($this), 'batchDeleteUploadedFile'],
       [$file->getFileUri()],
     ];
 
@@ -177,26 +189,41 @@ class PriceListImportForm extends FormBase {
     ]);
   }
 
-  public static function purgeExisting($price_list_id, array &$context) {
+  /**
+   * Batch operation to purge existing items on the price list.
+   *
+   * @param int $price_list_id
+   *   The price list ID.
+   * @param array $context
+   *   The batch context.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   * @throws \Drupal\Core\Entity\EntityStorageException
+   */
+  public static function batchPurgeExisting($price_list_id, array &$context) {
+    $entity_type_manager = \Drupal::entityTypeManager();
+    $price_list_storage = $entity_type_manager->getStorage('commerce_price_list');
+    $price_list_item_storage = $entity_type_manager->getStorage('commerce_price_list_item');
+
     /** @var \Drupal\commerce_pricelist\Entity\PriceList $price_list */
-    $price_list = PriceList::load($price_list_id);
+    $price_list = $price_list_storage->load($price_list_id);
+
     if (empty($context['sandbox'])) {
-      $context['sandbox']['total_quantity'] = $price_list->get('items')->count();
+      $context['sandbox']['total_items'] = $price_list->get('items')->count();
       $context['sandbox']['deleted'] = 0;
-      $context['results']['total_quantity'] = $context['sandbox']['total_quantity'];
+      $context['results']['total_items'] = $context['sandbox']['total_items'];
     }
-    $total_quantity = $context['sandbox']['total_quantity'];
+
+    $total_items = $context['sandbox']['total_items'];
     $deleted = &$context['sandbox']['deleted'];
-    $remaining = $total_quantity - $deleted;
+    $remaining = $total_items - $deleted;
     $limit = (int) ($remaining < self::BATCH_SIZE) ? $remaining : self::BATCH_SIZE;
 
-    if ($total_quantity == 0 || $price_list->get('items')->isEmpty()) {
+    if ($total_items == 0 || $price_list->get('items')->isEmpty()) {
       $context['finished'] = 1;
     }
     else {
-      $entity_type_manager = \Drupal::entityTypeManager();
-      $price_list_item_storage = $entity_type_manager->getStorage('commerce_price_list_item');
-
       $price_list_item_ids = array_slice($price_list->getItemsIds(), 0, $limit);
       $price_list_items = $price_list_item_storage->loadMultiple($price_list_item_ids);
       $price_list_item_storage->delete($price_list_items);
@@ -212,48 +239,59 @@ class PriceListImportForm extends FormBase {
 
       $deleted = $deleted + $limit;
 
-      $context['message'] = t('Deleting price list item @deleted of @total_quantity', [
+      $context['message'] = t('Deleting price list item @deleted of @total_items', [
         '@deleted' => $deleted,
-        '@total_quantity' => $total_quantity,
+        '@total_items' => $total_items,
       ]);
-      $context['finished'] = $deleted / $total_quantity;
+      $context['finished'] = $deleted / $total_items;
     }
   }
 
   /**
-   * Processes the batch and imports the price list items.
+   * Batch process to import price list items from the CSV.
    *
-   * @param $file_uri
+   * @param string $file_uri
+   *   The CSV file URI.
    * @param array $columns
-   * @param $strategy
+   *   The CSV columns.
+   * @param string $strategy
+   *   The existing price list item strategy.
+   * @param $price_list_id
    * @param array $context
-   *   The batch context information.
+   *   The batch context.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
+   * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
+   * @throws \Drupal\Core\Entity\EntityStorageException
    */
-  public static function processBatch($file_uri, array $columns, $strategy, $price_list_id, array &$context) {
+  public static function batchProcess($file_uri, array $columns, $strategy, $price_list_id, array &$context) {
+    $entity_type_manager = \Drupal::entityTypeManager();
+    $price_list_storage = $entity_type_manager->getStorage('commerce_price_list');
+    $price_list_item_storage = $entity_type_manager->getStorage('commerce_price_list_item');
+    /** @var \Drupal\commerce_pricelist\Entity\PriceList $price_list */
+    $price_list = $price_list_storage->load($price_list_id);
+
+    $purchasable_entity_storage = $entity_type_manager->getStorage($price_list->bundle());
+
     $csv = new CSVFileObject($file_uri);
     $csv->setColumnNames($columns);
 
     if (empty($context['sandbox'])) {
-      $context['sandbox']['total_quantity'] = (int) $csv->count();
+      $context['sandbox']['import_total'] = (int) $csv->count();
       $context['sandbox']['created'] = 0;
-      $context['results']['total_quantity'] = $context['sandbox']['total_quantity'];
+      $context['results']['import_total'] = $context['sandbox']['import_total'];
       $csv->rewind();
     }
 
-    $total_quantity = $context['sandbox']['total_quantity'];
+    $import_total = $context['sandbox']['import_total'];
     $created = &$context['sandbox']['created'];
-    $remaining = $total_quantity - $created;
+    $remaining = $import_total - $created;
     $limit = ($remaining < self::BATCH_SIZE) ? $remaining : self::BATCH_SIZE;
 
     $csv->seek($created + $csv->getHeaderRowCount());
     if ($csv->valid()) {
-      $entity_type_manager = \Drupal::entityTypeManager();
       /** @var \Drupal\commerce_pricelist\Entity\PriceList $price_list */
-      $price_list = PriceList::load($price_list_id);
       $default_currency = $price_list->getStore()->getDefaultCurrency();
-
-      $purchasable_entity_storage = $entity_type_manager->getStorage($price_list->bundle());
-      $price_list_item_storage = $entity_type_manager->getStorage('commerce_price_list_item');
 
       $mapping_field = reset($columns);
 
@@ -290,11 +328,11 @@ class PriceListImportForm extends FormBase {
         $csv->next();
       }
       $price_list->save();
-      $context['message'] = t('Importing @created of @total_quantity price list items', [
+      $context['message'] = t('Importing @created of @import_total price list items', [
         '@created' => $created,
-        '@total_quantity' => $total_quantity,
+        '@import_total' => $import_total,
       ]);
-      $context['finished'] = $created / $total_quantity;
+      $context['finished'] = $created / $import_total;
     }
     else {
       $context['finished'] = 1;
@@ -302,8 +340,18 @@ class PriceListImportForm extends FormBase {
 
   }
 
-  public static function deleteUploadedFile($file_uri, array &$context) {
-    $result = file_unmanaged_delete($file_uri);
+  /**
+   * Batch process to delete the uploaded CSV.
+   *
+   * @param string $file_uri
+   *   The CSV file URI.
+   * @param array $context
+   *   The batch context.
+   */
+  public static function batchDeleteUploadedFile($file_uri, array &$context) {
+    file_unmanaged_delete($file_uri);
+    $context['message'] = t('Removing uploaded CSV.');
+    $context['finished'] = 1;
   }
 
   /**
@@ -317,6 +365,7 @@ class PriceListImportForm extends FormBase {
    *   If $success is FALSE, contains the operations that remained unprocessed.
    */
   public static function finishBatch($success, array $results, array $operations) {
+    // @todo show created, skipped, deleted, etc.
     if ($success) {
       \Drupal::messenger()->addMessage(\Drupal::translation()->formatPlural(
         $results['total_quantity'],
