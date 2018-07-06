@@ -169,7 +169,7 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
    * {@inheritdoc}
    */
   public function getStore() {
-    return $this->getTranslatedReferencedEntity('store_id');
+    return $this->get('store_id')->entity;
   }
 
   /**
@@ -408,6 +408,10 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
       ->setRequired(TRUE)
       ->setSetting('target_type', 'commerce_store')
       ->setSetting('handler', 'default')
+      ->setDisplayOptions('form', [
+        'type' => 'commerce_entity_select',
+        'weight' => 1,
+      ])
       ->setDisplayConfigurable('form', TRUE)
       ->setDisplayConfigurable('view', TRUE);
 

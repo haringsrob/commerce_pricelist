@@ -101,8 +101,8 @@ interface PriceListInterface extends ContentEntityInterface, EntityChangedInterf
   /**
    * Gets the store.
    *
-   * @return \Drupal\commerce_store\Entity\StoreInterface|null
-   *   The store entity, or null.
+   * @return \Drupal\commerce_store\Entity\StoreInterface
+   *   The store entity.
    */
   public function getStore();
 
