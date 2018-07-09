@@ -277,6 +277,21 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
   /**
    * {@inheritdoc}
    */
+  public function getWeight() {
+    return (int) $this->get('weight')->value;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function setWeight($weight) {
+    $this->set('weight', $weight);
+    return $this;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function postSave(EntityStorageInterface $storage, $update = TRUE) {
     parent::postSave($storage, $update);
 
@@ -518,6 +533,28 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
    */
   public static function getCurrentUserId() {
     return [\Drupal::currentUser()->id()];
+  }
+
+  /**
+   * Helper callback for uasort() to sort price lists by weight and label.
+   *
+   * @param \Drupal\commerce_pricelist\Entity\PriceListInterface $a
+   *   The first price list to sort.
+   * @param \Drupal\commerce_pricelist\Entity\PriceListInterface $b
+   *   The second priice list to sort.
+   *
+   * @return int
+   *   The comparison result for uasort().
+   */
+  public static function sort(PriceListInterface $a, PriceListInterface $b) {
+    $a_weight = $a->getWeight();
+    $b_weight = $b->getWeight();
+    if ($a_weight == $b_weight) {
+      $a_label = $a->label();
+      $b_label = $b->label();
+      return strnatcasecmp($a_label, $b_label);
+    }
+    return ($a_weight < $b_weight) ? -1 : 1;
   }
 
 }

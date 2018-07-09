@@ -206,5 +206,22 @@ interface PriceListInterface extends ContentEntityInterface, EntityChangedInterf
    */
   public function setTargetRole(RoleInterface $role);
 
+  /**
+   * Gets the weight.
+   *
+   * @return int
+   *   The weight.
+   */
+  public function getWeight();
+
+  /**
+   * Sets the weight.
+   *
+   * @param int $weight
+   *   The weight.
+   *
+   * @return $this
+   */
+  public function setWeight($weight);
 
 }

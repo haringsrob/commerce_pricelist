@@ -41,9 +41,6 @@ class PriceListTest extends PriceListKernelTestBase {
     $this->assertEquals($this->store->label(), $pricelist->getStore()->label());
     $this->assertEquals($this->store->id(), $pricelist->getStoreId());
 
-
-    $definition = $pricelist->get('items')->getFieldDefinition();
-    $this->assertEquals('commerce_product_variation', $definition->getSetting('target_type'));
     $this->assertEmpty($pricelist->getItems());
     $this->assertEmpty($pricelist->getItemsIds());
     /** @var \Drupal\commerce_pricelist\Entity\PriceListItem $list_item1 */
