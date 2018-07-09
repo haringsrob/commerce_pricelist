@@ -215,4 +215,22 @@ class PriceListListBuilder extends EntityListBuilder implements FormInterface {
     }
   }
 
+  /**
+   * {@inheritdoc}
+   */
+  protected function getDefaultOperations(EntityInterface $entity) {
+    $operations = parent::getDefaultOperations($entity);
+    if ($entity->access('update')) {
+      $operations['prices'] = [
+        'title' => $this->t('Prices'),
+        'weight' => 20,
+        'url' => new Url('entity.commerce_price_list.prices', [
+          'commerce_price_list' => $entity->id(),
+        ]),
+      ];
+    }
+
+    return $operations;
+  }
+
 }
