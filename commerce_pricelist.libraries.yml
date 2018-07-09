@@ -1,0 +1,5 @@
+form:
+  version: VERSION
+  css:
+    component:
+      css/commerce_pricelist.form.css: {  }

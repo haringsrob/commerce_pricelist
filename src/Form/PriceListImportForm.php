@@ -23,7 +23,6 @@ class PriceListImportForm extends FormBase {
    */
   const BATCH_SIZE = 25;
 
-
   const STRATEGY_UPDATE_EXISTING = 'update_existing';
 
   const STRATEGY_SKIP_EXISTING = 'skip_existing';
@@ -54,6 +53,8 @@ class PriceListImportForm extends FormBase {
       return in_array($field_definition->getName(), $mappable_field_names);
     });
 
+    $form['#attached']['library'][] = 'commerce_pricelist/form';
+
     $validators = [
       'file_validate_extensions' => ['csv'],
       'file_validate_size' => [file_upload_max_size()],
@@ -65,36 +66,47 @@ class PriceListImportForm extends FormBase {
       '#upload_location' => 'temporary://',
     ];
 
-    $form['mapping'] = [
+    $form['purchasable_entity_mapping'] = [
       '#type' => 'fieldset',
-      '#title' => 'Mapping',
-      '#tree' => FALSE,
+      '#title' => 'Product mapping',
+      '#attributes' => [
+        'class' => ['inline'],
+      ],
+      '#tree' => TRUE,
     ];
-    $form['mapping']['mappable_field'] = [
+    $form['purchasable_entity_mapping']['field'] = [
       '#type' => 'select',
       '#title' => 'Field',
+      '#required' => TRUE,
       '#options' => array_map(function (FieldDefinitionInterface $field_definition) {
         return $field_definition->getLabel();
       }, $purchasable_entity_type_mapping_fields),
       '#default_value' => isset($purchasable_entity_type_mapping_fields['sku']) ? 'sku' : $target_purchasable_entity_type->getKey('uuid'),
     ];
-    $form['mapping']['import_field'] = [
+    $form['purchasable_entity_mapping']['column'] = [
       '#type' => 'textfield',
       '#title' => 'CSV column name',
+      '#required' => TRUE,
     ];
 
-    $form['pricing'] = [
+    $form['fields'] = [
       '#type' => 'fieldset',
-      '#title' => 'Prices',
-      '#tree' => FALSE,
+      '#title' => 'Fields',
     ];
-    $form['pricing']['sell_price_csv_column'] = [
+    $form['fields']['sell_price_csv_column'] = [
       '#type' => 'textfield',
       '#title' => 'Sell Price CSV column name',
+      '#required' => TRUE,
     ];
-    $form['pricing']['list_price_csv_column'] = [
+    $form['fields']['list_price_csv_column'] = [
       '#type' => 'textfield',
       '#title' => 'List price CSV column name',
+      '#description' => $this->t('If left empty, no list price will be set.'),
+    ];
+    $form['fields']['quantity_csv_column'] = [
+      '#type' => 'textfield',
+      '#title' => 'Quantity CSV column name',
+      '#description' => $this->t('If left empty, quantity will default to 1.'),
     ];
 
     // @todo Should we show a confirm form if this is selected?
@@ -150,9 +162,10 @@ class PriceListImportForm extends FormBase {
     $values = $form_state->getValues();
 
     $columns = array_filter([
-      $values['import_field'],
-      $values['sell_price_csv_column'],
-      $values['list_price_csv_column'],
+      'mapping' => $values['purchasable_entity_mapping']['column'],
+      'sell_price' => $values['sell_price_csv_column'],
+      'list_price' => $values['list_price_csv_column'],
+      'quantity' => $values['quantity_csv_column'],
     ]);
 
     $batch = [
@@ -172,6 +185,7 @@ class PriceListImportForm extends FormBase {
       [get_class($this), 'batchProcess'],
       [
         $file->getFileUri(),
+        $values['purchasable_entity_mapping']['field'],
         $columns,
         $values['strategy'],
         $form_state->get('price_list_id'),
@@ -252,11 +266,13 @@ class PriceListImportForm extends FormBase {
    *
    * @param string $file_uri
    *   The CSV file URI.
+   * @param string $mapping_field
+   *   The purchasable entity mapping field.
    * @param array $columns
    *   The CSV columns.
    * @param string $strategy
    *   The existing price list item strategy.
-   * @param $price_list_id
+   * @param string $price_list_id
    *   The price list ID.
    * @param array $context
    *   The batch context.
@@ -265,7 +281,7 @@ class PriceListImportForm extends FormBase {
    * @throws \Drupal\Component\Plugin\Exception\PluginNotFoundException
    * @throws \Drupal\Core\Entity\EntityStorageException
    */
-  public static function batchProcess($file_uri, array $columns, $strategy, $price_list_id, array &$context) {
+  public static function batchProcess($file_uri, $mapping_field, array $columns, $strategy, $price_list_id, array &$context) {
     $entity_type_manager = \Drupal::entityTypeManager();
     $price_list_storage = $entity_type_manager->getStorage('commerce_price_list');
     $price_list_item_storage = $entity_type_manager->getStorage('commerce_price_list_item');
@@ -296,8 +312,7 @@ class PriceListImportForm extends FormBase {
       /** @var \Drupal\commerce_pricelist\Entity\PriceList $price_list */
       $default_currency = $price_list->getStore()->getDefaultCurrency();
 
-      $mapping_field = reset($columns);
-
+      $mapping_field_column = $columns['mapping'];
       for ($i = 0; $i < $limit; $i++) {
         if (!$csv->valid()) {
           break;
@@ -305,7 +320,7 @@ class PriceListImportForm extends FormBase {
         $current = $csv->current();
 
         $purchasable_entity = $purchasable_entity_storage->loadByProperties([
-          $mapping_field => $current[$mapping_field],
+          $mapping_field => $current[$mapping_field_column],
         ]);
         $purchasable_entity = reset($purchasable_entity);
 
@@ -325,16 +340,22 @@ class PriceListImportForm extends FormBase {
           ->count()
           ->execute();
 
+        if (!empty($columns['quantity'])) {
+          $quantity = $current[$columns['quantity']];
+        }
+        else {
+          $quantity = 1;
+        }
+
         if ($count == 0) {
           $item = $price_list_item_storage->create([
             'type' => $price_list->bundle(),
             'uid' => $price_list->getOwnerId(),
             'price_list_id' => $price_list->id(),
             'purchased_entity' => $purchasable_entity->id(),
-            'name' => $current[$mapping_field],
-            // @todo support quantity in the CSV.
-            'quantity' => 1,
-            'price' => new Price($current[$columns[1]], $default_currency->getCurrencyCode()),
+            'name' => $current[$mapping_field_column],
+            'quantity' => $quantity,
+            'price' => new Price($current[$columns['sell_price']], $default_currency->getCurrencyCode()),
           ]);
           $item->save();
           $price_list->get('items')->appendItem($item);
@@ -346,15 +367,14 @@ class PriceListImportForm extends FormBase {
           ]);
           /** @var \Drupal\commerce_pricelist\Entity\PriceListItemInterface $existing_price_item */
           $existing_price_item = reset($existing_price_item);
-          $existing_price_item->setPrice(new Price($current[$columns[1]], $default_currency->getCurrencyCode()));
-          // @todo support quantity in the CSV.
-          $existing_price_item->setQuantity(1);
+          $existing_price_item->setPrice(new Price($current[$columns['sell_price']], $default_currency->getCurrencyCode()));
+          $existing_price_item->setQuantity($quantity);
           $existing_price_item->save();
-          $context['results']['import_updated'][] = $current[$mapping_field];
+          $context['results']['import_updated'][] = $current[$mapping_field_column];
         }
         else {
           // Skip.
-          $context['results']['import_skipped'][] = $current[$mapping_field];
+          $context['results']['import_skipped'][] = $current[$mapping_field_column];
         }
 
         $created++;
@@ -411,11 +431,13 @@ class PriceListImportForm extends FormBase {
           'Updated @count price list items during import.'
         ));
       }
-      \Drupal::messenger()->addWarning(\Drupal::translation()->formatPlural(
-        count($results['import_skipped']),
-        'Skipped 1 price list item during import.',
-        'Skipped @count price list items during import.'
-      ));
+      if (!empty($results['import_skipped'])) {
+        \Drupal::messenger()->addWarning(\Drupal::translation()->formatPlural(
+          count($results['import_skipped']),
+          'Skipped 1 price list item during import.',
+          'Skipped @count price list items during import.'
+        ));
+      }
     }
     else {
       $error_operation = reset($operations);
