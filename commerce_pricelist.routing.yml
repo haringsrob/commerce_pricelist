@@ -18,3 +18,16 @@ entity.commerce_price_list.import:
     parameters:
       commerce_price_list:
         type: 'entity:commerce_price_list'
+
+entity.commerce_price_list.prices:
+  path: '/pricelist/{commerce_price_list}/prices'
+  defaults:
+    _entity_list: 'commerce_price_list_item'
+    _title: 'Prices'
+  requirements:
+    _entity_access: 'commerce_price_list.update'
+  options:
+    _admin_route: TRUE
+    parameters:
+      commerce_price_list:
+        type: 'entity:commerce_price_list'

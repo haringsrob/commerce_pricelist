@@ -3,6 +3,7 @@
 namespace Drupal\commerce_pricelist\Form;
 
 use Drupal\Component\Datetime\TimeInterface;
+use Drupal\Core\Datetime\DateFormatterInterface;
 use Drupal\Core\Entity\EntityManagerInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Link;
@@ -27,6 +28,13 @@ class PriceListForm extends ContentEntityForm {
   protected $messenger;
 
   /**
+   * The date formatter.
+   *
+   * @var \Drupal\Core\Datetime\DateFormatterInterface
+   */
+  protected $dateFormatter;
+
+  /**
    * Constructs a ContentEntityForm object.
    *
    * @param \Drupal\Core\Entity\EntityManagerInterface $entity_manager
@@ -37,10 +45,13 @@ class PriceListForm extends ContentEntityForm {
    *   The time service.
    * @param \Drupal\Core\Messenger\MessengerInterface $messenger
    *   The messenger service.
+   * @param \Drupal\Core\Datetime\DateFormatterInterface $date_formatter
+   *   The date formatter.
    */
-  public function __construct(EntityManagerInterface $entity_manager, EntityTypeBundleInfoInterface $entity_type_bundle_info = NULL, TimeInterface $time = NULL, MessengerInterface $messenger) {
+  public function __construct(EntityManagerInterface $entity_manager, EntityTypeBundleInfoInterface $entity_type_bundle_info = NULL, TimeInterface $time = NULL, MessengerInterface $messenger, DateFormatterInterface $date_formatter) {
     parent::__construct($entity_manager, $entity_type_bundle_info, $time);
     $this->messenger = $messenger;
+    $this->dateFormatter = $date_formatter;
   }
 
   /**
@@ -51,7 +62,8 @@ class PriceListForm extends ContentEntityForm {
       $container->get('entity.manager'),
       $container->get('entity_type.bundle.info'),
       $container->get('datetime.time'),
-      $container->get('messenger')
+      $container->get('messenger'),
+      $container->get('date.formatter')
     );
   }
 
@@ -76,8 +88,8 @@ class PriceListForm extends ContentEntityForm {
    * {@inheritdoc}
    */
   public function form(array $form, FormStateInterface $form_state) {
-    /* @var \Drupal\commerce_pricelist\Entity\PriceList $priceList */
-    $priceList = $this->entity;
+    /* @var \Drupal\commerce_pricelist\Entity\PriceList $price_list */
+    $price_list = $this->entity;
     $form = parent::form($form, $form_state);
 
     $form['#tree'] = TRUE;
@@ -86,7 +98,7 @@ class PriceListForm extends ContentEntityForm {
 
     $form['changed'] = [
       '#type' => 'hidden',
-      '#default_value' => $priceList->getChangedTime(),
+      '#default_value' => $price_list->getChangedTime(),
     ];
 
     $form['footer'] = [
@@ -100,6 +112,9 @@ class PriceListForm extends ContentEntityForm {
     $form['status']['#group'] = 'footer';
 
     $last_saved = t('Not saved yet');
+    if (!$price_list->isNew()) {
+      $last_saved = $this->dateFormatter->format($price_list->getChangedTime(), 'short');
+    }
 
     $form['meta'] = [
       '#attributes' => ['class' => ['entity-meta__header']],
@@ -109,8 +124,8 @@ class PriceListForm extends ContentEntityForm {
       'published' => [
         '#type' => 'html_tag',
         '#tag' => 'h3',
-        '#value' => $priceList->isPublished() ? $this->t('Activated') : $this->t('Deactivated'),
-        '#access' => !$priceList->isNew(),
+        '#value' => $price_list->isPublished() ? $this->t('Activated') : $this->t('Deactivated'),
+        '#access' => !$price_list->isNew(),
         '#attributes' => [
           'class' => ['entity-meta__title'],
         ],
@@ -127,7 +142,7 @@ class PriceListForm extends ContentEntityForm {
         '#wrapper_attributes' => [
           'class' => ['author', 'container-inline'],
         ],
-        '#markup' => '<h4 class="label inline">' . $this->t('Author') . '</h4> ' . $priceList->getOwner()->getDisplayName(),
+        '#markup' => '<h4 class="label inline">' . $this->t('Author') . '</h4> ' . $price_list->getOwner()->getDisplayName(),
       ],
     ];
 

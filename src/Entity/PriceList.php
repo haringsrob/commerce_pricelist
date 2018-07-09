@@ -403,12 +403,12 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
       ->setRequired(FALSE)
       ->setSetting('target_type', 'commerce_price_list_item')
       ->setSetting('handler', 'default')
-      ->setDisplayOptions('form', [
-        'type' => 'inline_entity_form_complex',
-        'weight' => 50,
-        'settings' => [],
-      ])
-      ->setDisplayConfigurable('form', TRUE)
+//      ->setDisplayOptions('form', [
+//        'type' => 'inline_entity_form_complex',
+//        'weight' => 50,
+//        'settings' => [],
+//      ])
+      ->setDisplayConfigurable('form', FALSE)
       ->setDisplayConfigurable('view', TRUE);
 
     $fields['store_id'] = BaseFieldDefinition::create('entity_reference')

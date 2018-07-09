@@ -28,12 +28,17 @@ use Drupal\user\UserInterface;
  *   bundle_label = @Translation("price list item type"),
  *   handlers = {
  *     "access" = "Drupal\commerce\EmbeddedEntityAccessControlHandler",
+ *     "list_builder" = "Drupal\commerce_pricelist\PriceListItemListBuilder",
  *     "view_builder" = "Drupal\Core\Entity\EntityViewBuilder",
  *     "views_data" = "Drupal\views\EntityViewsData",
  *     "form" = {
- *       "default" = "Drupal\Core\Entity\ContentEntityForm",
+ *       "add" = "Drupal\Core\Entity\ContentEntityForm",
+ *       "edit" = "Drupal\Core\Entity\ContentEntityForm",
+ *       "delete" = "Drupal\Core\Entity\ContentEntityDeleteForm",
  *     },
- *     "inline_form" = "Drupal\commerce_pricelist\Form\PriceListItemInlineForm",
+ *     "route_provider" = {
+ *       "default" = "Drupal\commerce_pricelist\PriceListItemRouteProvider",
+ *     },
  *   },
  *   admin_permission = "administer price_list",
  *   base_table = "price_list_item",
@@ -45,12 +50,27 @@ use Drupal\user\UserInterface;
  *     "uuid" = "uuid",
  *     "published" = "status",
  *   },
+ *   links = {
+ *     "add-form" = "/pricelist/{commerce_price_list}/prices/add",
+ *     "edit-form" = "/pricelist/{commerce_price_list}/prices/{commerce_price_list_item}/edit",
+ *     "delete-form" = "/pricelist/{commerce_price_list}/prices/{commerce_price_list_item}/delete",
+ *     "collection" = "/pricelist/{commerce_price_list}/prices",
+ *   },
  * )
  */
 class PriceListItem extends CommerceContentEntityBase implements PriceListItemInterface {
 
   use EntityChangedTrait;
   use EntityPublishedTrait;
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function urlRouteParameters($rel) {
+    $uri_route_parameters = parent::urlRouteParameters($rel);
+    $uri_route_parameters['commerce_price_list'] = $this->getPriceListId();
+    return $uri_route_parameters;
+  }
 
   /**
    * {@inheritdoc}
@@ -342,7 +362,7 @@ class PriceListItem extends CommerceContentEntityBase implements PriceListItemIn
       ->setDisplayConfigurable('view', TRUE);
 
     $fields['list_price'] = BaseFieldDefinition::create('commerce_price')
-      ->setLabel(t('Price'))
+      ->setLabel(t('List price'))
       ->setDescription(t('The list price.'))
       ->setDisplayOptions('view', [
         'label' => 'above',
