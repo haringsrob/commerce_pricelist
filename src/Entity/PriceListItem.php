@@ -238,6 +238,16 @@ class PriceListItem extends CommerceContentEntityBase implements PriceListItemIn
 
     // Add the published field.
     $fields += static::publishedBaseFieldDefinitions($entity_type);
+    $fields['status']
+      ->setLabel(t('Activated'))
+      ->setDisplayOptions('form', [
+        'type' => 'boolean_checkbox',
+        'settings' => [
+          'display_label' => TRUE,
+        ],
+        'weight' => 120,
+      ])
+      ->setDisplayConfigurable('form', TRUE);
 
     $fields['uid'] = BaseFieldDefinition::create('entity_reference')
       ->setLabel(t('Author'))

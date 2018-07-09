@@ -324,6 +324,16 @@ class PriceList extends CommerceContentEntityBase implements PriceListInterface 
 
     // Add the published field.
     $fields += static::publishedBaseFieldDefinitions($entity_type);
+    $fields['status']
+      ->setLabel(t('Activated'))
+      ->setDisplayOptions('form', [
+        'type' => 'boolean_checkbox',
+        'settings' => [
+          'display_label' => TRUE,
+        ],
+        'weight' => 120,
+      ])
+      ->setDisplayConfigurable('form', TRUE);
 
     $fields['weight'] = BaseFieldDefinition::create('integer')
       ->setLabel(t('Weight'))

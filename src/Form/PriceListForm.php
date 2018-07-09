@@ -109,7 +109,7 @@ class PriceListForm extends ContentEntityForm {
       'published' => [
         '#type' => 'html_tag',
         '#tag' => 'h3',
-        '#value' => $priceList->isPublished() ? $this->t('Published') : $this->t('Not published'),
+        '#value' => $priceList->isPublished() ? $this->t('Activated') : $this->t('Deactivated'),
         '#access' => !$priceList->isNew(),
         '#attributes' => [
           'class' => ['entity-meta__title'],
