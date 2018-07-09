@@ -156,4 +156,22 @@ interface PriceListItemInterface extends ContentEntityInterface, EntityChangedIn
    */
   public function setPrice(Price $price);
 
+  /**
+   * Gets the price list item list price.
+   *
+   * @return \Drupal\commerce_price\Price
+   *   The price.
+   */
+  public function getListPrice();
+
+  /**
+   * Sets the price list item list price.
+   *
+   * @param \Drupal\commerce_price\Price $price
+   *   The price.
+   *
+   * @return $this
+   */
+  public function setListPrice(Price $price);
+
 }
