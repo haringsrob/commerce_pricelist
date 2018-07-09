@@ -110,7 +110,7 @@ class PriceListImportForm extends FormBase {
         self::STRATEGY_UPDATE_EXISTING => 'Update price list items for existing products in the import.',
         self::STRATEGY_SKIP_EXISTING => 'Ignore existing price list items for existing products in the import.',
       ],
-      '#default_value' => 'update_exists',
+      '#default_value' => self::STRATEGY_UPDATE_EXISTING,
       '#states' => [
         'visible' => [
           'input[name="purge"]' => ['checked' => FALSE],
@@ -257,6 +257,7 @@ class PriceListImportForm extends FormBase {
    * @param string $strategy
    *   The existing price list item strategy.
    * @param $price_list_id
+   *   The price list ID.
    * @param array $context
    *   The batch context.
    *
@@ -280,6 +281,8 @@ class PriceListImportForm extends FormBase {
       $context['sandbox']['import_total'] = (int) $csv->count();
       $context['sandbox']['created'] = 0;
       $context['results']['import_total'] = $context['sandbox']['import_total'];
+      $context['results']['import_skipped'] = [];
+      $context['results']['import_updated'] = [];
       $csv->rewind();
     }
 
@@ -308,7 +311,7 @@ class PriceListImportForm extends FormBase {
 
         // Bail early if the mapped purchasable entity value is invalid.
         if (!$purchasable_entity instanceof PurchasableEntityInterface) {
-          $context['skipped'][] = $current[$mapping_field];
+          $context['results']['import_skipped'][] = $current[$mapping_field];
           $created++;
           $csv->next();
           continue;
@@ -347,10 +350,11 @@ class PriceListImportForm extends FormBase {
           // @todo support quantity in the CSV.
           $existing_price_item->setQuantity(1);
           $existing_price_item->save();
+          $context['results']['import_updated'][] = $current[$mapping_field];
         }
         else {
-          $context['skipped'][] = $current[$mapping_field];
           // Skip.
+          $context['results']['import_skipped'][] = $current[$mapping_field];
         }
 
         $created++;
@@ -394,14 +398,24 @@ class PriceListImportForm extends FormBase {
    *   If $success is FALSE, contains the operations that remained unprocessed.
    */
   public static function finishBatch($success, array $results, array $operations) {
-    // @todo show created, skipped, deleted, etc.
     if ($success) {
       \Drupal::messenger()->addMessage(\Drupal::translation()->formatPlural(
-        $results['total_quantity'],
+        $results['import_total'],
         'Imported 1 price list item. You may now review them.',
-        'Importeed @count price list items. You may now review them.'
+        'Imported @count price list items. You may now review them.'
       ));
-      dpm($results);
+      if (!empty($results['import_updated'])) {
+        \Drupal::messenger()->addMessage(\Drupal::translation()->formatPlural(
+          count($results['import_updated']),
+          'Updated 1 price list item during import.',
+          'Updated @count price list items during import.'
+        ));
+      }
+      \Drupal::messenger()->addWarning(\Drupal::translation()->formatPlural(
+        count($results['import_skipped']),
+        'Skipped 1 price list item during import.',
+        'Skipped @count price list items during import.'
+      ));
     }
     else {
       $error_operation = reset($operations);
