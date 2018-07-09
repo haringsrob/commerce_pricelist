@@ -232,8 +232,8 @@ class PriceListImportForm extends FormBase {
       // reference only cares if the target_id is set, not that it is a viable
       // reference. This is only checked on the constraints. But constraints
       // do not provide enough data. So we use a custom filter.
-      $price_list->get('items')->filter(function (EntityReferenceItem $item) {
-        return $item->entity !== NULL;
+      $price_list->get('items')->filter(function (EntityReferenceItem $item) use ($price_list_item_ids) {
+        return !in_array($item->target_id, $price_list_item_ids);
       });
       $price_list->save();
 
@@ -306,23 +306,52 @@ class PriceListImportForm extends FormBase {
         ]);
         $purchasable_entity = reset($purchasable_entity);
 
+        // Bail early if the mapped purchasable entity value is invalid.
         if (!$purchasable_entity instanceof PurchasableEntityInterface) {
           $context['skipped'][] = $current[$mapping_field];
+          $created++;
+          $csv->next();
           continue;
         }
 
-        $item = $price_list_item_storage->create([
-          'type' => $price_list->bundle(),
-          'uid' => $price_list->getOwnerId(),
-          'price_list_id' => $price_list->id(),
-          'purchased_entity' => $purchasable_entity->id(),
-          'name' => $purchasable_entity->label(),
+        // Check if there is an existing price list item in this price list
+        // which targets the same purchasable entity.
+        $count = $price_list_item_storage->getQuery()
+          ->condition('price_list_id', $price_list->id())
+          ->condition('purchased_entity', $purchasable_entity->id())
+          ->count()
+          ->execute();
+
+        if ($count == 0) {
+          $item = $price_list_item_storage->create([
+            'type' => $price_list->bundle(),
+            'uid' => $price_list->getOwnerId(),
+            'price_list_id' => $price_list->id(),
+            'purchased_entity' => $purchasable_entity->id(),
+            'name' => $current[$mapping_field],
+            // @todo support quantity in the CSV.
+            'quantity' => 1,
+            'price' => new Price($current[$columns[1]], $default_currency->getCurrencyCode()),
+          ]);
+          $item->save();
+          $price_list->get('items')->appendItem($item);
+        }
+        elseif ($strategy == self::STRATEGY_UPDATE_EXISTING) {
+          $existing_price_item = $price_list_item_storage->loadByProperties([
+            'price_list_id' => $price_list->id(),
+            'purchased_entity' => $purchasable_entity->id(),
+          ]);
+          /** @var \Drupal\commerce_pricelist\Entity\PriceListItemInterface $existing_price_item */
+          $existing_price_item = reset($existing_price_item);
+          $existing_price_item->setPrice(new Price($current[$columns[1]], $default_currency->getCurrencyCode()));
           // @todo support quantity in the CSV.
-          'quantity' => 1,
-          'price' => new Price($current[$columns[1]], $default_currency->getCurrencyCode()),
-        ]);
-        $item->save();
-        $price_list->get('items')->appendItem($item);
+          $existing_price_item->setQuantity(1);
+          $existing_price_item->save();
+        }
+        else {
+          $context['skipped'][] = $current[$mapping_field];
+          // Skip.
+        }
 
         $created++;
         $csv->next();
@@ -372,6 +401,7 @@ class PriceListImportForm extends FormBase {
         'Imported 1 price list item. You may now review them.',
         'Importeed @count price list items. You may now review them.'
       ));
+      dpm($results);
     }
     else {
       $error_operation = reset($operations);
