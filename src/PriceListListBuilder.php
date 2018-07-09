@@ -18,8 +18,12 @@ class PriceListListBuilder extends EntityListBuilder {
    * {@inheritdoc}
    */
   public function buildHeader() {
-    $header['id'] = $this->t('Price list ID');
+    $header['id'] = $this->t('ID');
     $header['name'] = $this->t('Name');
+    $header['store'] = $this->t('Store');
+    $header['start_date'] = $this->t('Start date');
+    $header['end_date'] = $this->t('End date');
+    $header['status'] = $this->t('Status');
     return $header + parent::buildHeader();
   }
 
@@ -29,9 +33,12 @@ class PriceListListBuilder extends EntityListBuilder {
   public function buildRow(EntityInterface $entity) {
     /* @var $entity \Drupal\commerce_pricelist\Entity\PriceList */
     $name_url = Url::fromRoute('entity.commerce_price_list.edit_form', ['commerce_price_list' => $entity->id()]);
-    $name = Link::fromTextAndUrl($entity->label(), $name_url);
     $row['id'] = $entity->id();
-    $row['name'] = $name;
+    $row['name'] = Link::fromTextAndUrl($entity->label(), $name_url);
+    $row['store'] = $entity->getStore()->label();
+    $row['start_date'] = $entity->getStartDate()->format('M jS Y');
+    $row['end_date'] = $entity->getEndDate() ? $entity->getEndDate()->format('M jS Y') : '—';
+    $row['status'] = $entity->isPublished() ? $this->t('Activated') : $this->t('Deactivated');
     return $row + parent::buildRow($entity);
   }
 
