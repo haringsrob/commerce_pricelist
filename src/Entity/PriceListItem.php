@@ -40,7 +40,7 @@ use Drupal\user\UserInterface;
  *       "default" = "Drupal\commerce_pricelist\PriceListItemRouteProvider",
  *     },
  *   },
- *   admin_permission = "administer price_list",
+ *   admin_permission = "administer commerce_price_list",
  *   base_table = "price_list_item",
  *   data_table = "price_list_item_field_data",
  *   entity_keys = {
